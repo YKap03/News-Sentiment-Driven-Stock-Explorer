@@ -1,0 +1,5 @@
+# This directory stores trained ML models
+# After running train_model.py, you'll find:
+# - classifier.pkl (trained model)
+# - model_metrics.json (performance metrics)
+

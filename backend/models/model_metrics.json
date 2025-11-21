@@ -1,0 +1,15 @@
+{
+  "accuracy": 0.6,
+  "baseline_accuracy": 0.6,
+  "auc": 0.6234567901234568,
+  "n_samples": 221,
+  "train_start_date": "2025-10-22",
+  "train_end_date": "2025-11-21",
+  "n_tickers": 10,
+  "feature_names": [
+    "sentiment_avg",
+    "sentiment_rolling_mean_3d",
+    "return_1d",
+    "volatility_5d"
+  ]
+}
