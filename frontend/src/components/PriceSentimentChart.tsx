@@ -1,5 +1,4 @@
 import {
-  LineChart,
   Line,
   XAxis,
   YAxis,
@@ -7,8 +6,7 @@ import {
   Tooltip,
   Legend,
   ResponsiveContainer,
-  ComposedChart,
-  Bar
+  ComposedChart
 } from 'recharts';
 import type { PricePoint, SentimentPoint } from '../types';
 import { format, parseISO } from 'date-fns';

@@ -17,12 +17,6 @@ interface CorrelationChartProps {
 }
 
 export default function CorrelationChart({ priceSeries, sentimentSeries }: CorrelationChartProps) {
-  // Combine price and sentiment data by date
-  const priceMap = new Map(priceSeries.map(p => [p.date, p.close]));
-  const sentimentMap = new Map(sentimentSeries.map(s => [s.date, s.sentiment_avg]));
-
-  const allDates = Array.from(new Set([...priceMap.keys(), ...sentimentMap.keys()])).sort();
-
   // Normalize dates
   const normalizeDate = (d: string | Date): string => {
     if (typeof d === 'string') return d;
@@ -35,10 +29,6 @@ export default function CorrelationChart({ priceSeries, sentimentSeries }: Corre
   const sentimentMapNormalized = new Map(
     sentimentSeries.map(s => [normalizeDate(s.date), s.sentiment_avg])
   );
-
-  const allDatesNormalized = Array.from(
-    new Set([...priceMapNormalized.keys(), ...sentimentMapNormalized.keys()])
-  ).sort();
 
   // For correlation, we need dates where BOTH price and sentiment exist
   // If sentiment is sparse, we can use the closest sentiment value for each price date

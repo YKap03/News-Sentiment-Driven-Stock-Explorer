@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { format, subMonths } from 'date-fns';
+import { format } from 'date-fns';
 import TickerSelector from './components/TickerSelector';
 import DateRangePicker from './components/DateRangePicker';
 import SummaryBar from './components/SummaryBar';
@@ -16,7 +16,6 @@ function App() {
   const [ticker, setTicker] = useState('');
   // Default to last 30 days
   const [startDate, setStartDate] = useState(() => {
-    const end = new Date();
     const start = new Date();
     start.setDate(start.getDate() - 30);
     return format(start, 'yyyy-MM-dd');
