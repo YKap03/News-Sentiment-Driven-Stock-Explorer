@@ -1,10 +1,10 @@
 {
-  "accuracy": 0.6,
-  "baseline_accuracy": 0.6,
-  "auc": 0.6234567901234568,
-  "n_samples": 221,
-  "train_start_date": "2025-10-22",
-  "train_end_date": "2025-11-21",
+  "accuracy": 0.6923076923076923,
+  "baseline_accuracy": 0.6923076923076923,
+  "auc": 0.4814814814814815,
+  "n_samples": 192,
+  "train_start_date": "2025-10-25",
+  "train_end_date": "2025-11-24",
   "n_tickers": 10,
   "feature_names": [
     "sentiment_avg",

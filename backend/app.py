@@ -25,21 +25,27 @@ from schemas import (
 app = FastAPI(title="News & Sentiment Driven Stock Explorer API")
 
 # CORS configuration - configurable via environment variable
-# Defaults include localhost for development and Vercel for production
+# Defaults include localhost for development
 default_origins = [
     "http://localhost:5173",  # Vite default dev port
     "http://localhost:3000",  # Alternative dev port
-    "https://*.vercel.app",   # Vercel deployments (wildcard supported)
 ]
 
 # Parse ALLOWED_ORIGINS from environment (comma-separated list)
-# If not set, use defaults
+# For production, set this to your Vercel domain(s), e.g.:
+# ALLOWED_ORIGINS=https://your-app.vercel.app,https://your-preview.vercel.app
 allowed_origins_env = os.getenv("ALLOWED_ORIGINS")
 if allowed_origins_env:
     # Split by comma and strip whitespace
     origins = [origin.strip() for origin in allowed_origins_env.split(",")]
+    # Remove empty strings
+    origins = [o for o in origins if o]
 else:
     origins = default_origins
+
+# Also allow common Vercel deployment patterns if not explicitly set
+# FastAPI doesn't support wildcards, so we need explicit domains
+# Add your Vercel domain to ALLOWED_ORIGINS environment variable in Render
 
 app.add_middleware(
     CORSMiddleware,
