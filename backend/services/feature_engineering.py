@@ -1,27 +1,68 @@
 """
 Feature engineering for ML model.
+
+This module computes features and labels for ML training, ensuring:
+- No data leakage: features only use data up to and including date t
+- Labels are based on future returns (t+1 to t+3)
+- Clear, reproducible feature set
 """
 import pandas as pd
 import numpy as np
-from typing import List, Dict
+from typing import List, Dict, Optional
 from datetime import date, timedelta
 from db.models import DailyPrice, NewsArticle
 
 
+def compute_future_3d_return(df: pd.DataFrame) -> pd.Series:
+    """
+    Compute 3-day forward cumulative return for each row.
+    
+    For a row at date t, this computes the return from t+1 to t+3:
+    (close[t+3] / close[t]) - 1.0
+    
+    Args:
+        df: DataFrame with 'close' column, sorted by date
+        
+    Returns:
+        Series with future 3-day returns (NaN for last 3 rows)
+    """
+    return (df["close"].shift(-3) / df["close"] - 1.0)
+
+
+def label_future_3d_positive(future_ret: pd.Series, threshold: float = 0.0) -> pd.Series:
+    """
+    Create binary label from future returns.
+    
+    Args:
+        future_ret: Series of future 3-day returns
+        threshold: Threshold for positive label (default: 0.0)
+        
+    Returns:
+        Series of binary labels (1 if future_ret > threshold, else 0)
+    """
+    return (future_ret > threshold).astype(int)
+
+
 def compute_features(
     prices: List[dict],
-    articles: List[dict]
+    articles: List[dict],
+    label_threshold: float = 0.0
 ) -> pd.DataFrame:
     """
     Compute ML features from price and article data.
     
+    Features are computed using only data up to and including date t.
+    Labels are based on future returns (t+1 to t+3).
+    
     Args:
         prices: List of DailyPrice objects
         articles: List of NewsArticle objects
+        label_threshold: Threshold for positive label (default: 0.0)
         
     Returns:
-        DataFrame with columns: date, sentiment_avg, sentiment_rolling_mean_3d,
-        return_1d, volatility_5d, future_3d_return_positive
+        DataFrame with columns: date, ticker_symbol, sentiment_avg, 
+        sentiment_rolling_mean_3d, return_1d, volatility_5d, 
+        future_3d_return, future_3d_return_positive
     """
     # Convert to DataFrames
     from datetime import datetime, date as date_type
@@ -85,25 +126,30 @@ def compute_features(
     features_df["sentiment_avg"] = features_df["sentiment_avg"].fillna(0.0)
     
     # Compute rolling mean of sentiment (3 days)
+    # Uses data up to and including current day (no leakage)
     features_df["sentiment_rolling_mean_3d"] = (
         features_df["sentiment_avg"].rolling(window=3, min_periods=1).mean()
     )
     
-    # Compute future 3-day return
-    features_df["future_3d_return"] = (
-        features_df["close"].shift(-3) / features_df["close"] - 1.0
-    )
-    features_df["future_3d_return_positive"] = (
-        (features_df["future_3d_return"] > 0).astype(int)
+    # Compute future 3-day return (t+1 to t+3)
+    # This is the label - based on future data, not used as a feature
+    features_df["future_3d_return"] = compute_future_3d_return(features_df)
+    
+    # Create binary label
+    features_df["future_3d_return_positive"] = label_future_3d_positive(
+        features_df["future_3d_return"], 
+        threshold=label_threshold
     )
     
     # Select and return feature columns
     feature_cols = [
         "date",
+        "ticker_symbol",
         "sentiment_avg",
         "sentiment_rolling_mean_3d",
         "return_1d",
         "volatility_5d",
+        "future_3d_return",
         "future_3d_return_positive"
     ]
     
@@ -136,4 +182,19 @@ def prepare_training_data(features_df: pd.DataFrame) -> tuple:
     y = features_df["future_3d_return_positive"].values
     
     return X, y
+
+
+def get_feature_names() -> List[str]:
+    """
+    Get list of feature names used in training.
+    
+    Returns:
+        List of feature column names
+    """
+    return [
+        "sentiment_avg",
+        "sentiment_rolling_mean_3d",
+        "return_1d",
+        "volatility_5d"
+    ]
 

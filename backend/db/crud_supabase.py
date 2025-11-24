@@ -68,6 +68,22 @@ def get_latest_price_date(ticker_symbol: str) -> Optional[date]:
     return None
 
 
+def get_earliest_price_date(ticker_symbol: str) -> Optional[date]:
+    """Get the earliest date for which we have price data."""
+    supabase = get_supabase()
+    response = (
+        supabase.table("daily_prices")
+        .select("date")
+        .eq("ticker_symbol", ticker_symbol)
+        .order("date", desc=False)
+        .limit(1)
+        .execute()
+    )
+    if response.data:
+        return datetime.fromisoformat(response.data[0]["date"]).date()
+    return None
+
+
 def upsert_prices(prices: List[Dict]) -> None:
     """Upsert price data (insert or update)."""
     supabase = get_supabase()

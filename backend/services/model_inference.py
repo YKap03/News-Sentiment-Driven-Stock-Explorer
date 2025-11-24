@@ -15,23 +15,37 @@ from db.models import DailyPrice, NewsArticle
 class ModelInference:
     """Model inference service."""
     
-    def __init__(self, model_path: str = None, metrics_path: str = None):
+    def __init__(self, model_path: str = None, metrics_path: str = None, model_type: str = "logistic_regression"):
         """
         Initialize model inference service.
         
         Args:
-            model_path: Path to saved model pickle file
-            metrics_path: Path to model metrics JSON file
+            model_path: Path to saved model pickle file (default: loads primary model)
+            metrics_path: Path to model metrics JSON file (default: loads primary metrics)
+            model_type: Type of model to load ("logistic_regression", "random_forest", or "primary")
         """
+        models_dir = Path(__file__).parent.parent / "models"
+        
+        if model_type == "logistic_regression":
+            default_model_path = models_dir / "log_reg_model.pkl"
+            default_metrics_path = models_dir / "log_reg_metrics.json"
+        elif model_type == "random_forest":
+            default_model_path = models_dir / "rf_model.pkl"
+            default_metrics_path = models_dir / "rf_metrics.json"
+        else:  # "primary" or default
+            default_model_path = models_dir / "classifier.pkl"
+            default_metrics_path = models_dir / "model_metrics.json"
+        
         if model_path is None:
-            model_path = Path(__file__).parent.parent / "models" / "classifier.pkl"
+            model_path = default_model_path
         if metrics_path is None:
-            metrics_path = Path(__file__).parent.parent / "models" / "model_metrics.json"
+            metrics_path = default_metrics_path
         
         self.model_path = Path(model_path)
         self.metrics_path = Path(metrics_path)
         self.model = None
         self.metrics = None
+        self.model_type = model_type
         self._load_model()
         self._load_metrics()
     
@@ -49,7 +63,13 @@ class ModelInference:
             with open(self.metrics_path, "r") as f:
                 self.metrics = json.load(f)
         else:
-            self.metrics = {}
+            # Try to load primary metrics as fallback
+            primary_metrics_path = Path(__file__).parent.parent / "models" / "model_metrics.json"
+            if primary_metrics_path.exists():
+                with open(primary_metrics_path, "r") as f:
+                    self.metrics = json.load(f)
+            else:
+                self.metrics = {}
     
     def get_metrics(self) -> Dict:
         """Get model metrics."""

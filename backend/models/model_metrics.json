@@ -1,15 +1,23 @@
 {
-  "accuracy": 0.6923076923076923,
-  "baseline_accuracy": 0.6923076923076923,
-  "auc": 0.4814814814814815,
-  "n_samples": 192,
-  "train_start_date": "2025-10-25",
-  "train_end_date": "2025-11-24",
+  "accuracy": 0.6861313868613139,
+  "baseline_accuracy": 0.708029197080292,
+  "auc": 0.7048969072164948,
+  "balanced_accuracy": 0.5873711340206185,
+  "n_samples": 137,
+  "n_train": 550,
+  "n_test": 137,
+  "train_start_date": "2024-11-21",
+  "train_end_date": "2025-11-03",
+  "test_start_date": "2025-11-03",
+  "test_end_date": "2025-11-24",
   "n_tickers": 10,
   "feature_names": [
     "sentiment_avg",
     "sentiment_rolling_mean_3d",
     "return_1d",
     "volatility_5d"
-  ]
+  ],
+  "model_type": "logistic_regression",
+  "best_C": 1.0,
+  "decision_threshold": 0.5
 }

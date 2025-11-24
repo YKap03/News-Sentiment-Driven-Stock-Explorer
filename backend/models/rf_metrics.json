@@ -1,0 +1,43 @@
+{
+  "model_type": "random_forest",
+  "accuracy": 0.583941605839416,
+  "train_accuracy": 0.6054545454545455,
+  "baseline_accuracy": 0.708029197080292,
+  "balanced_accuracy": 0.5739690721649484,
+  "train_balanced_accuracy": 0.6038039199989326,
+  "roc_auc": 0.5939432989690722,
+  "precision_pos": 0.36065573770491804,
+  "recall_pos": 0.55,
+  "f1_pos": 0.43564356435643564,
+  "precision_neg": 0.7631578947368421,
+  "recall_neg": 0.5979381443298969,
+  "f1_neg": 0.6705202312138728,
+  "confusion_matrix": {
+    "tn": 58,
+    "fp": 39,
+    "fn": 18,
+    "tp": 22
+  },
+  "n_train": 550,
+  "n_test": 137,
+  "class_distribution_train": {
+    "0": 249,
+    "1": 301
+  },
+  "class_distribution_test": {
+    "0": 97,
+    "1": 40
+  },
+  "train_start_date": "2024-11-21",
+  "train_end_date": "2025-11-03",
+  "test_start_date": "2025-11-03",
+  "test_end_date": "2025-11-24",
+  "n_tickers": 10,
+  "feature_names": [
+    "sentiment_avg",
+    "sentiment_rolling_mean_3d",
+    "return_1d",
+    "volatility_5d"
+  ],
+  "label_threshold": 0.0
+}

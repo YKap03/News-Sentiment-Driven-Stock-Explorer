@@ -36,6 +36,15 @@ python init_db.py
 python train_model.py
 ```
 
+   This will:
+   - Load all available data from Supabase
+   - Compute features and labels (3-day forward returns)
+   - Split data chronologically (time-based split)
+   - Train logistic regression and random forest models
+   - Save models and metrics to `models/` directory
+   
+   **Note**: Training uses only database data - no external API calls during training.
+
 5. Start API:
 ```bash
 uvicorn app:app --reload --host 0.0.0.0 --port 8000
@@ -61,14 +70,67 @@ uvicorn app:app --reload --host 0.0.0.0 --port 8000
 ## Model
 
 The ML model predicts whether a stock will have a positive return over the next 3 trading days based on:
-- Daily average sentiment
+- Daily average sentiment (weighted by relevance score)
 - 3-day rolling mean of sentiment
 - 1-day return
 - 5-day volatility
 
+### Model Training
+
+The training pipeline implements best practices for time-series ML:
+
+1. **Time-based train/test split**: Data is split chronologically (not randomly) to avoid data leakage
+   - Train: earliest 70-80% of dates
+   - Test: latest 20-30% of dates
+
+2. **No data leakage**: Features only use data up to and including date `t`, labels are based on returns from `t+1` to `t+3`
+
+3. **Multiple models trained**:
+   - **Logistic Regression** (regularized baseline): Strong regularization (C=0.1), balanced class weights
+   - **Random Forest** (regularized): Shallow trees (max_depth=4), high min_samples_leaf (50) to prevent overfitting
+
+4. **Comprehensive metrics**: Each model reports:
+   - Accuracy (train and test)
+   - Baseline accuracy (majority class frequency)
+   - ROC-AUC
+   - Precision, recall, F1 for each class
+   - Confusion matrix
+   - Class distribution
+
+### Training Script
+
 Training script: `train_model.py`
-Model saved to: `models/classifier.pkl`
-Metrics saved to: `models/model_metrics.json`
+
+**Usage:**
+```bash
+cd backend
+python train_model.py
+```
+
+**Configuration** (at top of `train_model.py`):
+- `DEFAULT_TICKERS`: List of tickers or `None` for all tickers
+- `DEFAULT_START_DATE`: Start date for data (default: 2020-01-01)
+- `DEFAULT_END_DATE`: End date (default: today)
+- `DEFAULT_TEST_SIZE`: Fraction for test set (default: 0.2)
+- `DEFAULT_LABEL_THRESHOLD`: Threshold for positive label (default: 0.0)
+
+**Output:**
+- `models/log_reg_model.pkl` - Logistic regression model
+- `models/log_reg_metrics.json` - Logistic regression metrics
+- `models/rf_model.pkl` - Random forest model
+- `models/rf_metrics.json` - Random forest metrics
+- `models/classifier.pkl` - Primary model (logistic regression by default, for backward compatibility)
+- `models/model_metrics.json` - Primary metrics (for backward compatibility)
+
+### Model Evaluation
+
+The training script provides honest, interpretable metrics:
+- **Test accuracy vs baseline**: Shows if the model beats a simple majority-class baseline
+- **ROC-AUC**: Measures discrimination ability (0.5 = random, 1.0 = perfect)
+- **Train vs test accuracy gap**: Indicates overfitting (large gap = overfitting)
+- **Class distribution**: Shows data balance
+
+**Note**: If test accuracy ≈ baseline accuracy or ROC-AUC < 0.5, the model has no predictive power. This is expected for financial prediction tasks where signals are weak.
 
 ## News Relevance Filtering
 

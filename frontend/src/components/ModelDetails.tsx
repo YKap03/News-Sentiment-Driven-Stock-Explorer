@@ -64,20 +64,38 @@ export default function ModelDetails() {
                 {(metrics.baseline_accuracy * 100).toFixed(1)}%
               </div>
             </div>
-            {metrics.auc && (
+            {metrics.balanced_accuracy !== undefined && metrics.balanced_accuracy !== null && (
               <div>
-                <div className="text-sm text-gray-500">ROC-AUC</div>
+                <div className="text-sm text-gray-500">Balanced Accuracy</div>
                 <div className="text-xl font-semibold text-gray-900">
-                  {metrics.auc.toFixed(3)}
+                  {(metrics.balanced_accuracy * 100).toFixed(1)}%
                 </div>
               </div>
             )}
+            {(metrics.auc || metrics.roc_auc) && (
+              <div>
+                <div className="text-sm text-gray-500">ROC-AUC</div>
+                <div className="text-xl font-semibold text-gray-900">
+                  {(metrics.auc || metrics.roc_auc || 0).toFixed(3)}
+                </div>
+              </div>
+            )}
+          </div>
+          <div className="mt-4 grid grid-cols-2 md:grid-cols-4 gap-4">
             <div>
-              <div className="text-sm text-gray-500">Samples</div>
+              <div className="text-sm text-gray-500">Test Samples</div>
               <div className="text-xl font-semibold text-gray-900">
-                {metrics.n_samples.toLocaleString()}
+                {(metrics.n_test || metrics.n_samples || 0).toLocaleString()}
               </div>
             </div>
+            {metrics.n_train && (
+              <div>
+                <div className="text-sm text-gray-500">Train Samples</div>
+                <div className="text-xl font-semibold text-gray-900">
+                  {metrics.n_train.toLocaleString()}
+                </div>
+              </div>
+            )}
           </div>
         </div>
 

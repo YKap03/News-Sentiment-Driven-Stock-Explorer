@@ -266,12 +266,47 @@ async def get_summary(
 
 @app.get("/api/model-metrics", response_model=ModelMetricsResponse)
 async def get_model_metrics():
-    """Get model training metrics."""
-    model_inference = get_model_inference()
-    metrics = model_inference.get_metrics()
+    """
+    Get model training metrics.
+    
+    Returns metrics from the primary model (logistic regression by default).
+    Includes comprehensive metrics if available from the new training pipeline.
+    """
+    # Try to load logistic regression metrics first (primary model)
+    from pathlib import Path
+    import json
+    
+    models_dir = Path(__file__).parent / "models"
+    log_reg_metrics_path = models_dir / "log_reg_metrics.json"
+    
+    metrics = {}
+    
+    # Prefer logistic regression metrics if available
+    if log_reg_metrics_path.exists():
+        try:
+            with open(log_reg_metrics_path, "r") as f:
+                metrics = json.load(f)
+        except Exception as e:
+            print(f"Warning: Could not load log_reg_metrics.json: {e}")
+    
+    # Fall back to primary metrics or model inference metrics
+    if not metrics:
+        model_inference = get_model_inference()
+        metrics = model_inference.get_metrics()
     
     if not metrics:
         raise HTTPException(status_code=404, detail="Model metrics not found. Train the model first.")
+    
+    # Ensure backward compatibility: map 'roc_auc' to 'auc' if needed
+    if "roc_auc" in metrics and "auc" not in metrics:
+        metrics["auc"] = metrics["roc_auc"]
+    # Also set roc_auc if only auc exists
+    if "auc" in metrics and "roc_auc" not in metrics:
+        metrics["roc_auc"] = metrics["auc"]
+    
+    # Map 'n_test' to 'n_samples' for backward compatibility
+    if "n_test" in metrics and "n_samples" not in metrics:
+        metrics["n_samples"] = metrics["n_test"]
     
     return ModelMetricsResponse(**metrics)
 

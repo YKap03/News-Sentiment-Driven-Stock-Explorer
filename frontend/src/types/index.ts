@@ -48,10 +48,18 @@ export interface ModelMetrics {
   accuracy: number;
   baseline_accuracy: number;
   auc: number | null;
+  roc_auc?: number | null;
+  balanced_accuracy?: number | null;
   n_samples: number;
+  n_train?: number | null;
+  n_test?: number | null;
   train_start_date: string;
   train_end_date: string;
+  test_start_date?: string | null;
+  test_end_date?: string | null;
   n_tickers: number | null;
   feature_names: string[] | null;
+  best_C?: number | null;
+  decision_threshold?: number | null;
 }
 
