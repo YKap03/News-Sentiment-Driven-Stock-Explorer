@@ -36,52 +36,78 @@ def ensure_price_data(
     if start_date >= end_date:
         start_date = end_date - timedelta(days=365)
     
-    # Check what we have
-    latest_date = crud_supabase.get_latest_price_date(ticker_symbol)
+    # FIRST: Check if we already have all the data we need in the database
+    existing_prices = crud_supabase.get_prices(ticker_symbol, start_date, end_date)
+    existing_dates = set()
+    for p in existing_prices:
+        try:
+            price_date = p["date"]
+            if isinstance(price_date, str):
+                price_date = date.fromisoformat(price_date)
+            elif isinstance(price_date, date):
+                pass
+            else:
+                continue
+            existing_dates.add(price_date)
+        except Exception:
+            continue
     
-    # Determine what we need to fetch
-    fetch_start = start_date
-    fetch_end = end_date
+    # Check if we have complete coverage
+    current = start_date
+    missing_dates = []
+    while current <= end_date:
+        if current not in existing_dates:
+            missing_dates.append(current)
+        current += timedelta(days=1)
     
-    if latest_date:
-        # If we have recent data, only fetch missing ranges
-        if latest_date >= end_date - timedelta(days=max_staleness_days):
-            # We have recent data, check for gaps
-            existing_prices = crud_supabase.get_prices(ticker_symbol, start_date, end_date)
-            existing_dates = {date.fromisoformat(p["date"]) for p in existing_prices}
-            
-            # Find missing dates
-            current = start_date
-            missing_ranges = []
-            range_start = None
-            
-            while current <= end_date:
-                if current not in existing_dates:
-                    if range_start is None:
-                        range_start = current
-                else:
-                    if range_start is not None:
-                        missing_ranges.append((range_start, current - timedelta(days=1)))
-                        range_start = None
-                current += timedelta(days=1)
-            
-            if range_start is not None:
-                missing_ranges.append((range_start, end_date))
-            
-            # Fetch missing ranges
-            for ms, me in missing_ranges:
+    # If we have all the data, return early - don't call yfinance
+    if not missing_dates:
+        print(f"[INFO] Price data for {ticker_symbol} already exists in database for range {start_date} to {end_date}")
+        return
+    
+    # We have some missing dates, but only fetch if dates are not in the future
+    # Group missing dates into ranges
+    if missing_dates:
+        missing_ranges = []
+        range_start = missing_dates[0]
+        range_end = missing_dates[0]
+        
+        for d in missing_dates[1:]:
+            if d == range_end + timedelta(days=1):
+                range_end = d
+            else:
+                # End current range and start new one
+                if range_start <= today:  # Only fetch if not entirely in the future
+                    fetch_end = min(range_end, today)
+                    if fetch_end >= range_start:
+                        missing_ranges.append((range_start, fetch_end))
+                range_start = d
+                range_end = d
+        
+        # Add final range
+        if range_start <= today:
+            fetch_end = min(range_end, today)
+            if fetch_end >= range_start:
+                missing_ranges.append((range_start, fetch_end))
+        
+        # Fetch missing ranges (only if not in the future)
+        for ms, me in missing_ranges:
+            if ms <= today and me <= today:
                 prices = yfinance_client.fetch_price_data(ticker_symbol, ms, me)
                 if prices:
                     crud_supabase.upsert_prices(prices)
-            return
-        else:
-            # Data is stale, fetch from latest_date to end_date
-            fetch_start = latest_date + timedelta(days=1)
     
-    # Fetch the needed range
-    prices = yfinance_client.fetch_price_data(ticker_symbol, fetch_start, fetch_end)
-    if prices:
-        crud_supabase.upsert_prices(prices)
+    # Also check if we need to update stale data
+    latest_date = crud_supabase.get_latest_price_date(ticker_symbol)
+    if latest_date and latest_date < end_date - timedelta(days=max_staleness_days):
+        # Data is stale, but only fetch if end_date is not in the future
+        if end_date <= today:
+            fetch_start = latest_date + timedelta(days=1)
+            fetch_end = min(end_date, today)
+            if fetch_start <= fetch_end:
+                prices = yfinance_client.fetch_price_data(ticker_symbol, fetch_start, fetch_end)
+                if prices:
+                    crud_supabase.upsert_prices(prices)
 
 
 def ensure_news_data(

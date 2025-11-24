@@ -109,7 +109,7 @@ function App() {
             {/* Secondary Charts Row */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
               <ReturnsChart priceSeries={summary.price_series} />
-              <SentimentDistributionChart sentimentSeries={summary.sentiment_series} />
+              <SentimentDistributionChart articles={summary.articles} />
             </div>
 
             {/* News Feed */}
