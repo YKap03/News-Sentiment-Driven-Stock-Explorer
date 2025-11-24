@@ -4,7 +4,7 @@ FastAPI backend application.
 import os
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from typing import List, Optional
 from collections import defaultdict
 
@@ -87,6 +87,17 @@ async def get_summary(
         default_start, default_end = get_last_30_days_range()
         start_date = start_date or default_start
         end_date = end_date or default_end
+    
+    # Cap dates to today - cannot fetch future data
+    today = date.today()
+    if end_date > today:
+        end_date = today
+    if start_date > today:
+        start_date = today - timedelta(days=365)
+    
+    # Ensure valid date range
+    if start_date >= end_date:
+        start_date = end_date - timedelta(days=365)
     
     # Validate ticker exists
     ticker_obj = crud_supabase.get_ticker_by_symbol(ticker)

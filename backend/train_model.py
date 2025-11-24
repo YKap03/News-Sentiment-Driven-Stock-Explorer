@@ -514,6 +514,12 @@ def train_model(
         if all_earliest_dates and all_latest_dates:
             detected_start = min(all_earliest_dates)
             detected_end = max(all_latest_dates)
+            
+            # Cap detected_end to today - database might have future dates but we can't fetch more
+            if detected_end > today:
+                print(f"⚠ Detected end date {detected_end} is in the future, capping to {today}")
+                detected_end = today
+            
             print(f"✓ Available date range: {detected_start} to {detected_end}")
             
             # Use detected range if dates not explicitly provided
@@ -535,6 +541,14 @@ def train_model(
             if end_date is None:
                 end_date = today
             print(f"⚠ No price data found in database. Will query range: {start_date} to {end_date}")
+        
+        # Final safety check: cap to today
+        if end_date > today:
+            print(f"⚠ End date {end_date} is in the future, capping to {today}")
+            end_date = today
+        if start_date > today:
+            print(f"⚠ Start date {start_date} is in the future, adjusting to {today - timedelta(days=365)}")
+            start_date = today - timedelta(days=365)
         
         print(f"\nQuerying data from {start_date} to {end_date}")
         print(f"Test size: {test_size:.1%}")

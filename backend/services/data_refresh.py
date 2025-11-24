@@ -23,6 +23,19 @@ def ensure_price_data(
         end_date: End date
         max_staleness_days: Consider data stale if last date is older than this
     """
+    # Cap dates to today - yfinance can't fetch future data
+    today = date.today()
+    if end_date > today:
+        print(f"[INFO] Capping end_date from {end_date} to {today} (cannot fetch future data)")
+        end_date = today
+    if start_date > today:
+        print(f"[INFO] Capping start_date from {start_date} to {today - timedelta(days=365)} (cannot fetch future data)")
+        start_date = today - timedelta(days=365)
+    
+    # Ensure valid date range
+    if start_date >= end_date:
+        start_date = end_date - timedelta(days=365)
+    
     # Check what we have
     latest_date = crud_supabase.get_latest_price_date(ticker_symbol)
     
