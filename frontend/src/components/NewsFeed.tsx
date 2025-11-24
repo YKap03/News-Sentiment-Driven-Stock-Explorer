@@ -11,14 +11,29 @@ export default function NewsFeed({ articles }: NewsFeedProps) {
       return <span className="px-2 py-1 text-xs rounded bg-gray-100 text-gray-700">Unknown</span>;
     }
 
+    // Map Alpha Vantage labels and numeric scores to colors
+    // Labels: "Bullish", "Somewhat-Bullish", "Neutral", "Somewhat-Bearish", "Bearish"
+    // Or: "Positive", "Negative" (if using OpenAI)
+    const isPositive = 
+      label === 'Positive' || 
+      label === 'Bullish' || 
+      label === 'Somewhat-Bullish' ||
+      (score !== null && score > 0.1);
+    
+    const isNegative = 
+      label === 'Negative' || 
+      label === 'Bearish' || 
+      label === 'Somewhat-Bearish' ||
+      (score !== null && score < -0.1);
+
     const colorClass =
-      label === 'Positive' ? 'bg-green-100 text-green-800' :
-      label === 'Negative' ? 'bg-red-100 text-red-800' :
+      isPositive ? 'bg-green-100 text-green-800' :
+      isNegative ? 'bg-red-100 text-red-800' :
       'bg-gray-100 text-gray-800';
 
     return (
       <span className={`px-2 py-1 text-xs rounded font-semibold ${colorClass}`}>
-        {label} ({score.toFixed(2)})
+        {label} ({score !== null ? score.toFixed(2) : 'N/A'})
       </span>
     );
   };

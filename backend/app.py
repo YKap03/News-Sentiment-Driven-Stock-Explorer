@@ -82,11 +82,36 @@ async def get_summary(
     
     If start_date or end_date are not provided, defaults to last 30 days.
     """
-    # Default to last 30 days if dates not provided
+    # Default to last 30 days if dates not provided, but check available data first
     if start_date is None or end_date is None:
-        default_start, default_end = get_last_30_days_range()
-        start_date = start_date or default_start
-        end_date = end_date or default_end
+        # Try to detect available date range from database
+        latest_date = crud_supabase.get_latest_price_date(ticker)
+        earliest_date = crud_supabase.get_earliest_price_date(ticker)
+        
+        if latest_date and earliest_date:
+            # Use available data range, but cap to today
+            today = date.today()
+            detected_end = min(latest_date, today)
+            detected_start = earliest_date
+            
+            # If no dates provided, use detected range
+            if start_date is None:
+                start_date = detected_start
+            if end_date is None:
+                end_date = detected_end
+            
+            # If dates provided but out of range, adjust
+            if start_date > detected_end:
+                start_date = detected_start
+            if end_date > detected_end:
+                end_date = detected_end
+            if end_date < detected_start:
+                end_date = detected_end
+        else:
+            # No data in DB, use default 30 days
+            default_start, default_end = get_last_30_days_range()
+            start_date = start_date or default_start
+            end_date = end_date or default_end
     
     # Cap dates to today - cannot fetch future data
     today = date.today()
@@ -157,6 +182,15 @@ async def get_summary(
     # Get articles (only relevant ones)
     articles = crud_supabase.get_articles(ticker, start_date, end_date, relevant_only=True)
     
+    # Debug: Log sentiment distribution
+    sentiment_scores = [float(a["sentiment_score"]) for a in articles if a.get("sentiment_score") is not None]
+    if sentiment_scores:
+        negative_count = sum(1 for s in sentiment_scores if s < -0.1)
+        positive_count = sum(1 for s in sentiment_scores if s > 0.1)
+        neutral_count = len(sentiment_scores) - negative_count - positive_count
+        print(f"[DEBUG] {ticker} sentiment distribution: {len(sentiment_scores)} articles, "
+              f"negative: {negative_count}, neutral: {neutral_count}, positive: {positive_count}")
+    
     # Compute daily sentiment averages
     daily_sentiment = defaultdict(list)
     for article in articles:
@@ -188,13 +222,24 @@ async def get_summary(
         for d, scores in sorted(daily_sentiment.items())
     ]
     
-    # Calculate average sentiment
-    all_sentiments = [
-        float(a["sentiment_score"])
-        for a in articles
-        if a.get("sentiment_score") is not None
-    ]
-    avg_sentiment = sum(all_sentiments) / len(all_sentiments) if all_sentiments else 0.0
+    # Calculate average sentiment (weighted by relevance_score if available)
+    all_sentiments = []
+    for a in articles:
+        sentiment_score = a.get("sentiment_score")
+        if sentiment_score is not None:
+            # Use relevance_score as weight if available
+            relevance = float(a.get("relevance_score", 1.0)) if a.get("relevance_score") is not None else 1.0
+            all_sentiments.append((float(sentiment_score), relevance))
+    
+    if all_sentiments:
+        # Weighted average
+        total_weight = sum(weight for _, weight in all_sentiments)
+        if total_weight > 0:
+            avg_sentiment = sum(score * weight for score, weight in all_sentiments) / total_weight
+        else:
+            avg_sentiment = sum(score for score, _ in all_sentiments) / len(all_sentiments)
+    else:
+        avg_sentiment = 0.0
     
     # Format articles
     article_responses = []
