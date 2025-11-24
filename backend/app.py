@@ -25,10 +25,11 @@ from schemas import (
 app = FastAPI(title="News & Sentiment Driven Stock Explorer API")
 
 # CORS configuration - configurable via environment variable
-# Defaults include localhost for development
+# Defaults include localhost for development and common Vercel patterns
 default_origins = [
     "http://localhost:5173",  # Vite default dev port
     "http://localhost:3000",  # Alternative dev port
+    "https://news-sentiment-driven-stock-explore.vercel.app",  # Production Vercel domain
 ]
 
 # Parse ALLOWED_ORIGINS from environment (comma-separated list)
@@ -38,18 +39,24 @@ allowed_origins_env = os.getenv("ALLOWED_ORIGINS")
 if allowed_origins_env:
     # Split by comma and strip whitespace
     origins = [origin.strip() for origin in allowed_origins_env.split(",")]
-    # Remove empty strings
+    # Remove trailing slashes and empty strings
+    origins = [o.rstrip('/') for o in origins if o]
+    # Remove empty strings after stripping
     origins = [o for o in origins if o]
+    # Merge with defaults to ensure localhost is always available for dev
+    origins = list(set(origins + default_origins))
 else:
     origins = default_origins
 
-# Also allow common Vercel deployment patterns if not explicitly set
-# FastAPI doesn't support wildcards, so we need explicit domains
-# Add your Vercel domain to ALLOWED_ORIGINS environment variable in Render
+# Log origins for debugging
+print(f"CORS allowed origins: {origins}")
 
+# CORS middleware configuration
+# Using allow_origin_regex to match any *.vercel.app domain for flexibility
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
+    allow_origin_regex=r"https://.*\.vercel\.app",  # Allow any Vercel deployment
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
