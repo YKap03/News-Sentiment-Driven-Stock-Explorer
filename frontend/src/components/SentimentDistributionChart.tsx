@@ -51,6 +51,9 @@ export default function SentimentDistributionChart({ articles }: SentimentDistri
     'Very Positive': 0
   };
 
+  // Debug: Count labels for troubleshooting
+  const labelCounts: Record<string, number> = {};
+
   articlesWithSentiment.forEach(article => {
     const sentiment = article.sentiment_score;
     if (sentiment === null || sentiment === undefined) {
@@ -60,26 +63,30 @@ export default function SentimentDistributionChart({ articles }: SentimentDistri
     // Also check sentiment_label for Alpha Vantage labels
     const label = article.sentiment_label;
     if (label) {
-      // Map Alpha Vantage labels directly
-      if (label === 'Bearish') {
+      // Count labels for debugging
+      labelCounts[label] = (labelCounts[label] || 0) + 1;
+      
+      // Map Alpha Vantage labels directly (case-insensitive)
+      const labelLower = label.toLowerCase();
+      if (labelLower === 'bearish') {
         categories['Very Negative']++;
         return;
-      } else if (label === 'Somewhat-Bearish') {
+      } else if (labelLower === 'somewhat-bearish') {
         categories['Negative']++;
         return;
-      } else if (label === 'Neutral') {
+      } else if (labelLower === 'neutral') {
         categories['Neutral']++;
         return;
-      } else if (label === 'Somewhat-Bullish') {
+      } else if (labelLower === 'somewhat-bullish') {
         categories['Positive']++;
         return;
-      } else if (label === 'Bullish') {
+      } else if (labelLower === 'bullish') {
         categories['Very Positive']++;
         return;
       }
     }
     
-    // Fallback to numeric score if label not available
+    // Fallback to numeric score if label not available or not recognized
     if (sentiment < -0.5) {
       categories['Very Negative']++;
     } else if (sentiment < -0.1) {
@@ -92,6 +99,12 @@ export default function SentimentDistributionChart({ articles }: SentimentDistri
       categories['Very Positive']++;
     }
   });
+
+  // Debug logging (only in development)
+  if (import.meta.env.DEV && Object.keys(labelCounts).length > 0) {
+    console.log('[SentimentDistributionChart] Label counts:', labelCounts);
+    console.log('[SentimentDistributionChart] Category counts:', categories);
+  }
 
   const totalArticles = articlesWithSentiment.length;
   const chartData = Object.entries(categories).map(([name, value]) => ({

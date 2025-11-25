@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { format } from 'date-fns';
 import TickerSelector from './components/TickerSelector';
 import DateRangePicker from './components/DateRangePicker';
 import SummaryBar from './components/SummaryBar';
@@ -13,14 +12,11 @@ import { getSummary } from './api/client';
 import type { SummaryResponse } from './types';
 
 function App() {
+  // Fixed date range matching available database data
+  const FIXED_START_DATE = '2025-10-21';
+  const FIXED_END_DATE = '2025-11-20';
+
   const [ticker, setTicker] = useState('');
-  // Default to last 30 days
-  const [startDate, setStartDate] = useState(() => {
-    const start = new Date();
-    start.setDate(start.getDate() - 30);
-    return format(start, 'yyyy-MM-dd');
-  });
-  const [endDate, setEndDate] = useState(() => format(new Date(), 'yyyy-MM-dd'));
   const [summary, setSummary] = useState<SummaryResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -35,7 +31,7 @@ function App() {
     setError(null);
 
     try {
-      const data = await getSummary(ticker, startDate, endDate);
+      const data = await getSummary(ticker, FIXED_START_DATE, FIXED_END_DATE);
       setSummary(data);
     } catch (err) {
       console.error('Error fetching analysis:', err);
@@ -69,10 +65,8 @@ function App() {
           <div className="space-y-4">
             <TickerSelector value={ticker} onChange={setTicker} />
             <DateRangePicker
-              startDate={startDate}
-              endDate={endDate}
-              onStartDateChange={setStartDate}
-              onEndDateChange={setEndDate}
+              startDate={FIXED_START_DATE}
+              endDate={FIXED_END_DATE}
             />
             <button
               onClick={handleAnalyze}

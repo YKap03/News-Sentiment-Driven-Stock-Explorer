@@ -1,22 +1,12 @@
-import { format, subDays } from 'date-fns';
-
 interface DateRangePickerProps {
   startDate: string;
   endDate: string;
-  onStartDateChange: (date: string) => void;
-  onEndDateChange: (date: string) => void;
 }
 
 export default function DateRangePicker({
   startDate,
-  endDate,
-  onStartDateChange,
-  onEndDateChange
+  endDate
 }: DateRangePickerProps) {
-  // Default to last 30 days
-  const defaultStart = format(subDays(new Date(), 30), 'yyyy-MM-dd');
-  const defaultEnd = format(new Date(), 'yyyy-MM-dd');
-
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
       <div>
@@ -26,10 +16,10 @@ export default function DateRangePicker({
         <input
           id="start-date"
           type="date"
-          value={startDate || defaultStart}
-          onChange={(e) => onStartDateChange(e.target.value)}
-          max={endDate || defaultEnd}
-          className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          value={startDate}
+          readOnly
+          disabled
+          className="w-full px-3 py-2 border border-gray-200 rounded-md shadow-sm bg-gray-100 text-gray-600 cursor-not-allowed"
         />
       </div>
       <div>
@@ -39,11 +29,10 @@ export default function DateRangePicker({
         <input
           id="end-date"
           type="date"
-          value={endDate || defaultEnd}
-          onChange={(e) => onEndDateChange(e.target.value)}
-          min={startDate || defaultStart}
-          max={defaultEnd}
-          className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          value={endDate}
+          readOnly
+          disabled
+          className="w-full px-3 py-2 border border-gray-200 rounded-md shadow-sm bg-gray-100 text-gray-600 cursor-not-allowed"
         />
       </div>
     </div>
