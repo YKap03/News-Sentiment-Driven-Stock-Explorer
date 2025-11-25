@@ -6,8 +6,6 @@ interface ControlsSectionProps {
   endDate: string;
   loading: boolean;
   onTickerChange: (ticker: string) => void;
-  onStartDateChange: (date: string) => void;
-  onEndDateChange: (date: string) => void;
   onAnalyze: () => void;
 }
 

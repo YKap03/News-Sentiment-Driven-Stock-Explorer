@@ -15,8 +15,8 @@ import { IconTrendingUp, IconZap } from './components/Icons';
 function App() {
   // Default date range - Fixed for demo data
   const [ticker, setTicker] = useState('');
-  const [startDate, setStartDate] = useState('2025-10-21'); 
-  const [endDate, setEndDate] = useState('2025-11-20');
+  const [startDate] = useState('2025-10-21'); 
+  const [endDate] = useState('2025-11-20');
   
   const [summary, setSummary] = useState<SummaryResponse | null>(null);
   const [loading, setLoading] = useState(false);
