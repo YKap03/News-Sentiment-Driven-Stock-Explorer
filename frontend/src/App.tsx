@@ -9,7 +9,6 @@ import NewsDriversSection from './components/NewsDriversSection';
 import ModelReliabilitySection from './components/ModelDetails'; // Refactored component
 import { getSummary } from './api/client';
 import type { SummaryResponse } from './types';
-import { format } from 'date-fns';
 
 function App() {
   // Default date range - Fixed for demo data
