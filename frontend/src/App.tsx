@@ -12,10 +12,10 @@ import type { SummaryResponse } from './types';
 import { format } from 'date-fns';
 
 function App() {
-  // Default date range
+  // Default date range - Fixed for demo data
   const [ticker, setTicker] = useState('');
-  const [startDate, setStartDate] = useState('2024-06-01'); 
-  const [endDate, setEndDate] = useState(format(new Date(), 'yyyy-MM-dd')); // Today
+  const [startDate, setStartDate] = useState('2025-10-21'); 
+  const [endDate, setEndDate] = useState('2025-11-20');
   
   const [summary, setSummary] = useState<SummaryResponse | null>(null);
   const [loading, setLoading] = useState(false);
