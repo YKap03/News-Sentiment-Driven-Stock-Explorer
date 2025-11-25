@@ -188,8 +188,18 @@ async def get_summary(
         negative_count = sum(1 for s in sentiment_scores if s < -0.1)
         positive_count = sum(1 for s in sentiment_scores if s > 0.1)
         neutral_count = len(sentiment_scores) - negative_count - positive_count
+        
+        # Also count by label
+        label_counts = {}
+        for a in articles:
+            label = a.get("sentiment_label")
+            if label:
+                label_counts[label] = label_counts.get(label, 0) + 1
+        
         print(f"[DEBUG] {ticker} sentiment distribution: {len(sentiment_scores)} articles, "
               f"negative: {negative_count}, neutral: {neutral_count}, positive: {positive_count}")
+        if label_counts:
+            print(f"[DEBUG] {ticker} sentiment labels: {label_counts}")
     
     # Compute daily sentiment averages
     daily_sentiment = defaultdict(list)

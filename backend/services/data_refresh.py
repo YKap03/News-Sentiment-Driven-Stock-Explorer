@@ -53,19 +53,25 @@ def ensure_price_data(
             continue
     
     # Check if we have complete coverage
+    # IMPORTANT: Only check for missing dates that are NOT in the future
     current = start_date
     missing_dates = []
     while current <= end_date:
-        if current not in existing_dates:
+        # Skip future dates - we can't fetch them from yfinance anyway
+        if current <= today and current not in existing_dates:
             missing_dates.append(current)
         current += timedelta(days=1)
     
-    # If we have all the data, return early - don't call yfinance
+    # If we have all the data (or all missing dates are in the future), return early
     if not missing_dates:
-        print(f"[INFO] Price data for {ticker_symbol} already exists in database for range {start_date} to {end_date}")
+        if end_date > today:
+            print(f"[INFO] Price data for {ticker_symbol} exists in database for range {start_date} to {end_date}. "
+                  f"End date is in the future ({end_date}), skipping yfinance fetch.")
+        else:
+            print(f"[INFO] Price data for {ticker_symbol} already exists in database for range {start_date} to {end_date}")
         return
     
-    # We have some missing dates, but only fetch if dates are not in the future
+    # We have some missing dates (all are <= today since we filtered above)
     # Group missing dates into ranges
     if missing_dates:
         missing_ranges = []
