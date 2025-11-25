@@ -6,9 +6,11 @@ import CorrelationChart from './components/CorrelationChart';
 import ReturnsChart from './components/ReturnsChart';
 import SentimentDistributionChart from './components/SentimentDistributionChart';
 import NewsDriversSection from './components/NewsDriversSection';
-import ModelReliabilitySection from './components/ModelDetails'; // Refactored component
+import ModelReliabilitySection from './components/ModelDetails';
+import BackendExplainer from './components/BackendExplainer';
 import { getSummary } from './api/client';
 import type { SummaryResponse } from './types';
+import { IconTrendingUp, IconZap } from './components/Icons';
 
 function App() {
   // Default date range - Fixed for demo data
@@ -89,57 +91,83 @@ function App() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 font-sans">
-      {/* 1.1 Hero Header */}
-      <header className="bg-white border-b border-slate-200 sticky top-0 z-10">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex flex-col md:flex-row md:items-center justify-between">
-            <div>
-                <h1 className="text-2xl font-bold text-slate-900 tracking-tight">
-                    News & Sentiment Driven Stock Explorer
-                </h1>
-                <p className="text-sm text-slate-500 mt-1">
-                    Explore how ticker-specific news sentiment lined up with short-term stock returns.
-                </p>
-            </div>
-          </div>
-        </div>
-      </header>
+    <div className="min-h-screen bg-slate-50 font-sans selection:bg-blue-100 text-slate-900">
+       {/* Decorative Background Elements */}
+       <div className="fixed inset-0 pointer-events-none overflow-hidden">
+         <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-blue-400/10 rounded-full blur-[100px]" />
+         <div className="absolute top-[20%] right-[-10%] w-[40%] h-[40%] bg-indigo-400/10 rounded-full blur-[100px]" />
+       </div>
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        
-        {/* 1.2 Controls Section */}
-        <ControlsSection 
-            ticker={ticker}
-            startDate={startDate}
-            endDate={endDate}
-            loading={loading}
-            onTickerChange={setTicker}
-            onStartDateChange={setStartDate}
-            onEndDateChange={setEndDate}
-            onAnalyze={handleAnalyze}
-        />
+       {/* New Hero Header */}
+       <header className="relative bg-white/80 backdrop-blur-md border-b border-slate-200/50 sticky top-0 z-50">
+         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+                <div className="w-8 h-8 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-lg flex items-center justify-center text-white shadow-lg shadow-blue-500/20">
+                    <IconTrendingUp className="w-5 h-5" />
+                </div>
+                <span className="font-bold text-lg tracking-tight text-slate-900">StockSentiment<span className="text-blue-600">.AI</span></span>
+            </div>
+            <div className="text-xs font-medium px-3 py-1 bg-slate-100 rounded-full text-slate-600 border border-slate-200">
+                v1.0.0 • Beta
+            </div>
+         </div>
+       </header>
+
+       <main className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+         
+         {/* Hero Text */}
+         <div className="text-center mb-16">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-50 border border-blue-100 text-blue-700 text-sm font-medium mb-6">
+                <IconZap className="w-4 h-4" />
+                <span>Powered by Advanced NLP & Random Forest</span>
+            </div>
+            <h1 className="text-4xl md:text-6xl font-extrabold text-slate-900 tracking-tight mb-6">
+                Decode the Market with <br/>
+                <span className="gradient-text">Sentiment Intelligence</span>
+            </h1>
+            <p className="text-lg md:text-xl text-slate-500 max-w-2xl mx-auto leading-relaxed">
+                Don't just watch the price. Understand the <strong>why</strong> behind the move using our institutional-grade sentiment analysis engine.
+            </p>
+         </div>
+
+         {/* Backend Explainer Section */}
+         <BackendExplainer />
+
+         {/* Controls Section */}
+         <div id="analyze" className="scroll-mt-24 relative z-10">
+            <ControlsSection 
+                ticker={ticker}
+                startDate={startDate}
+                endDate={endDate}
+                loading={loading}
+                onTickerChange={setTicker}
+                // onStartDateChange={setStartDate} // Unused
+                // onEndDateChange={setEndDate}     // Unused
+                onAnalyze={handleAnalyze}
+            />
+         </div>
 
         {error && (
-            <div className="mb-8 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700 flex items-center">
+            <div className="mb-8 p-4 bg-red-50 border border-red-200 rounded-xl text-red-700 flex items-center shadow-sm">
                 <svg className="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" /></svg>
                 {error}
             </div>
         )}
 
         {filteredSummary && (
-            <>
+            <div className="animate-fade-in">
                 {/* 1.3 Insight Bar */}
                 <SummaryBar data={filteredSummary} />
 
                 {/* 2. Evidence Section */}
-                <section className="mb-12">
-                    <div className="mb-6 border-b border-gray-200 pb-2">
-                        <h2 className="text-2xl font-bold text-gray-900">3. Evidence</h2>
-                        <p className="text-gray-500">See how price, sentiment, and returns behaved over this period.</p>
+                <section className="mb-16">
+                    <div className="flex items-center gap-4 mb-8">
+                        <div className="h-px flex-1 bg-slate-200"></div>
+                        <h2 className="text-2xl font-bold text-slate-900">3. Evidence & Analysis</h2>
+                        <div className="h-px flex-1 bg-slate-200"></div>
                     </div>
 
-                    <div className="grid gap-6 lg:grid-cols-2">
+                    <div className="grid gap-8 lg:grid-cols-2">
                         {/* Price & Sentiment */}
                         <div className="lg:h-[450px]">
                             <PriceSentimentChart
@@ -161,7 +189,7 @@ function App() {
                         </div>
                     </div>
 
-                    <div className="grid gap-6 lg:grid-cols-2 mt-6">
+                    <div className="grid gap-8 lg:grid-cols-2 mt-8">
                         {/* Returns */}
                         <div className="lg:h-[400px]">
                             <ReturnsChart 
@@ -183,7 +211,7 @@ function App() {
                 </section>
 
                 {/* 3. News Drivers Section */}
-                <div ref={newsSectionRef} className="mb-12 scroll-mt-24">
+                <div ref={newsSectionRef} className="mb-16 scroll-mt-24">
                     <NewsDriversSection 
                         articles={filteredSummary.articles}
                         priceSeries={filteredSummary.price_series}
@@ -191,23 +219,31 @@ function App() {
                         selectedSentimentBucket={selectedSentimentBucket}
                     />
                 </div>
-            </>
+            </div>
         )}
 
         {/* 4. Model Reliability */}
-        <section className="mb-12">
+        <section className="mb-16">
             <ModelReliabilitySection />
         </section>
 
+        {/* Footer */}
+        <footer className="mt-24 border-t border-slate-200 pt-12 pb-8 text-center">
+            <div className="flex items-center justify-center gap-2 mb-4 opacity-50">
+                <IconTrendingUp className="w-6 h-6" />
+            </div>
+            <p className="text-slate-400 text-sm mb-4 max-w-md mx-auto">
+                Built for the future of finance. This project demonstrates the power of combining unstructured news data with quantitative market signals.
+            </p>
+            <div className="flex justify-center gap-6 text-slate-400 text-xs font-medium uppercase tracking-wider">
+                <span>FastAPI</span>
+                <span>React</span>
+                <span>Supabase</span>
+                <span>Tailwind</span>
+                <span>Sklearn</span>
+            </div>
+        </footer>
       </main>
-      
-      {/* Footer */}
-      <footer className="bg-white border-t border-slate-200 py-8 mt-12">
-        <div className="max-w-7xl mx-auto px-4 text-center text-slate-500 text-sm">
-            <p>Built with FastAPI, React, and Machine Learning.</p>
-            <p className="mt-1">Not financial advice. For educational purposes only.</p>
-        </div>
-      </footer>
     </div>
   );
 }

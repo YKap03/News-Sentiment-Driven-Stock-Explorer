@@ -33,10 +33,10 @@ export default function TickerSelector({ value, onChange }: TickerSelectorProps)
   if (loading) {
     return (
       <div className="w-full">
-        <label className="block text-sm font-medium text-gray-700 mb-1">
+        <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
           Stock Ticker
         </label>
-        <div className="px-3 py-2 border border-gray-300 rounded-md bg-gray-100 animate-pulse">
+        <div className="px-4 py-2.5 border border-slate-200 rounded-lg bg-slate-50 animate-pulse text-slate-400">
           Loading...
         </div>
       </div>
@@ -46,10 +46,10 @@ export default function TickerSelector({ value, onChange }: TickerSelectorProps)
   if (error) {
     return (
       <div className="w-full">
-        <label className="block text-sm font-medium text-gray-700 mb-1">
+        <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
           Stock Ticker
         </label>
-        <div className="px-3 py-2 border border-red-300 rounded-md bg-red-50 text-red-700">
+        <div className="px-4 py-2.5 border border-red-300 rounded-lg bg-red-50 text-red-600 text-sm">
           {error}
         </div>
       </div>
@@ -58,22 +58,28 @@ export default function TickerSelector({ value, onChange }: TickerSelectorProps)
 
   return (
     <div className="w-full">
-      <label htmlFor="ticker" className="block text-sm font-medium text-gray-700 mb-1">
-        Stock Ticker
+      <label htmlFor="ticker" className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
+        Select Asset
       </label>
-      <select
-        id="ticker"
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-      >
-        {tickers.map((ticker) => (
-          <option key={ticker.symbol} value={ticker.symbol}>
-            {ticker.symbol} {ticker.name ? `- ${ticker.name}` : ''}
-          </option>
-        ))}
-      </select>
+      <div className="relative">
+        <select
+            id="ticker"
+            value={value}
+            onChange={(e) => onChange(e.target.value)}
+            className="w-full px-4 py-2.5 border border-slate-200 rounded-lg shadow-sm bg-white text-slate-900 font-medium focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 appearance-none cursor-pointer hover:border-blue-300 transition-colors"
+        >
+            {tickers.map((ticker) => (
+            <option key={ticker.symbol} value={ticker.symbol}>
+                {ticker.symbol} — {ticker.name || 'Unknown Company'}
+            </option>
+            ))}
+        </select>
+        <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-slate-500">
+            <svg className="h-4 w-4 fill-current" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
+                <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z" />
+            </svg>
+        </div>
+      </div>
     </div>
   );
 }
-

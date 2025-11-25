@@ -5,7 +5,6 @@ import {
   YAxis,
   CartesianGrid,
   Tooltip,
-  Legend,
   ResponsiveContainer,
   Cell
 } from 'recharts';
@@ -16,131 +15,79 @@ interface SentimentDistributionChartProps {
   onBucketClick?: (bucket: string) => void;
 }
 
+const CustomTooltip = ({ active, payload, label }: any) => {
+    if (active && payload && payload.length) {
+        const data = payload[0].payload;
+        return (
+            <div className="custom-tooltip">
+                <p className="font-bold text-slate-900 mb-1">{label}</p>
+                <p className="text-sm text-slate-600">
+                    Count: <span className="font-mono font-bold text-slate-900">{data.count}</span>
+                </p>
+                <p className="text-xs text-slate-400">{data.percentage}% of total</p>
+            </div>
+        );
+    }
+    return null;
+};
+
 export default function SentimentDistributionChart({ articles, onBucketClick }: SentimentDistributionChartProps) {
-  // Handle empty or sparse sentiment data
-  if (!articles || articles.length === 0) {
-    return (
-      <div className="bg-white rounded-xl shadow-sm border p-6 h-full">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">Sentiment Distribution</h3>
-        <div className="text-center text-gray-500 py-8">
-          <p>No sentiment data available.</p>
-        </div>
-      </div>
-    );
-  }
+  const articlesWithSentiment = articles?.filter(a => a.sentiment_score !== null) || [];
+  if (articlesWithSentiment.length === 0) return <div className="glass-card p-8 text-center text-slate-400">No sentiment data</div>;
 
-  // Filter articles that have sentiment scores
-  const articlesWithSentiment = articles.filter(a => a.sentiment_score !== null && a.sentiment_score !== undefined);
-
-  if (articlesWithSentiment.length === 0) {
-    return (
-      <div className="bg-white rounded-xl shadow-sm border p-6 h-full">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">Sentiment Distribution</h3>
-        <div className="text-center text-gray-500 py-8">
-          <p>No articles with sentiment scores available.</p>
-        </div>
-      </div>
-    );
-  }
-
-  // Categorize sentiment based on individual article scores
-  const categories = {
-    'Very Negative': 0,
-    'Negative': 0,
-    'Neutral': 0,
-    'Positive': 0,
-    'Very Positive': 0
-  };
+  const categories = { 'Very Negative': 0, 'Negative': 0, 'Neutral': 0, 'Positive': 0, 'Very Positive': 0 };
 
   articlesWithSentiment.forEach(article => {
-    const sentiment = article.sentiment_score;
-    if (sentiment === null || sentiment === undefined) {
-      return;
-    }
+    const s = article.sentiment_score || 0;
+    const label = article.sentiment_label?.toLowerCase();
     
-    const label = article.sentiment_label;
-    if (label) {
-      const labelLower = label.toLowerCase();
-      if (labelLower === 'bearish') {
-        categories['Very Negative']++;
-        return;
-      } else if (labelLower === 'somewhat-bearish') {
-        categories['Negative']++;
-        return;
-      } else if (labelLower === 'neutral') {
-        categories['Neutral']++;
-        return;
-      } else if (labelLower === 'somewhat-bullish') {
-        categories['Positive']++;
-        return;
-      } else if (labelLower === 'bullish') {
-        categories['Very Positive']++;
-        return;
-      }
-    }
-    
-    if (sentiment < -0.5) {
-      categories['Very Negative']++;
-    } else if (sentiment < -0.1) {
-      categories['Negative']++;
-    } else if (sentiment <= 0.1) {
-      categories['Neutral']++;
-    } else if (sentiment <= 0.5) {
-      categories['Positive']++;
-    } else {
-      categories['Very Positive']++;
-    }
+    if (label === 'bearish') categories['Very Negative']++;
+    else if (label === 'somewhat-bearish') categories['Negative']++;
+    else if (label === 'neutral') categories['Neutral']++;
+    else if (label === 'somewhat-bullish') categories['Positive']++;
+    else if (label === 'bullish') categories['Very Positive']++;
+    else if (s < -0.5) categories['Very Negative']++;
+    else if (s < -0.1) categories['Negative']++;
+    else if (s <= 0.1) categories['Neutral']++;
+    else if (s <= 0.5) categories['Positive']++;
+    else categories['Very Positive']++;
   });
 
-  const totalArticles = articlesWithSentiment.length;
+  const total = articlesWithSentiment.length;
   const chartData = Object.entries(categories).map(([name, value]) => ({
-    name,
-    count: value,
-    percentage: totalArticles > 0 ? ((value / totalArticles) * 100).toFixed(1) : '0.0',
-    color: name.includes('Positive') ? '#10b981' : name.includes('Negative') ? '#ef4444' : '#6b7280'
+    name, count: value,
+    percentage: total > 0 ? ((value / total) * 100).toFixed(1) : '0.0',
+    color: name.includes('Positive') ? '#10b981' : name.includes('Negative') ? '#f43f5e' : '#94a3b8'
   }));
 
   return (
-    <div className="bg-white rounded-xl shadow-sm border p-6 h-full transition-transform hover:-translate-y-0.5 hover:shadow-md">
-        <div className="mb-4">
-            <h3 className="text-lg font-semibold text-gray-900">Sentiment Distribution</h3>
-            <p className="text-sm text-gray-500">How many articles were very negative vs very positive?</p>
-        </div>
-      <ResponsiveContainer width="100%" height={300}>
-        <BarChart 
-            data={chartData}
-            onClick={(state) => {
-                if (state && state.activePayload && state.activePayload.length > 0) {
-                    const bucket = state.activePayload[0].payload.name;
-                    if (onBucketClick) onBucketClick(bucket);
-                }
-            }}
-        >
-          <CartesianGrid strokeDasharray="3 3" />
-          <XAxis dataKey="name" />
-          <YAxis label={{ value: 'Count', angle: -90, position: 'insideLeft' }} />
-          <Tooltip
-            formatter={(value: number, name: string, props: any) => {
-              if (name === 'Article Count') {
-                return [
-                  `${value} articles (${props.payload.percentage}%)`,
-                  'Count'
-                ];
-              }
-              return [value, name];
-            }}
-            cursor={{fill: 'transparent'}}
-          />
-          <Legend />
-          <Bar dataKey="count" name="Article Count" cursor="pointer">
-            {chartData.map((entry, index) => (
-                <Cell key={`cell-${index}`} fill={entry.color} />
-            ))}
-          </Bar>
-        </BarChart>
-      </ResponsiveContainer>
-      <div className="mt-4 text-sm text-gray-600 border-t pt-3">
-        <p>This shows whether the news flow was skewed positive, negative, or neutral.</p>
+    <div className="glass-card p-6 h-full flex flex-col">
+      <div className="mb-6">
+          <h3 className="text-lg font-bold text-slate-900">Sentiment Balance</h3>
+          <p className="text-sm text-slate-500">Is the news flow skewed?</p>
+      </div>
+      <div className="flex-grow">
+        <ResponsiveContainer width="100%" height="100%">
+            <BarChart 
+                data={chartData}
+                onClick={(state) => {
+                    if (state && state.activePayload && state.activePayload.length > 0) {
+                        const bucket = state.activePayload[0].payload.name;
+                        if (onBucketClick) onBucketClick(bucket);
+                    }
+                }}
+            >
+            <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
+            <XAxis dataKey="name" tick={{fontSize: 10, fill: '#64748b'}} axisLine={false} tickLine={false} />
+            <YAxis tick={{fontSize: 12, fill: '#64748b'}} axisLine={false} tickLine={false} />
+            <Tooltip content={<CustomTooltip />} cursor={{fill: '#f1f5f9'}} />
+            <Bar dataKey="count" radius={[4, 4, 0, 0]}>
+                {chartData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={entry.color} />
+                ))}
+            </Bar>
+            </BarChart>
+        </ResponsiveContainer>
       </div>
     </div>
   );
