@@ -6,7 +6,8 @@ import {
   Tooltip,
   Legend,
   ResponsiveContainer,
-  ComposedChart
+  ComposedChart,
+  Brush
 } from 'recharts';
 import type { PricePoint, SentimentPoint } from '../types';
 import { format, parseISO } from 'date-fns';
@@ -14,9 +15,18 @@ import { format, parseISO } from 'date-fns';
 interface PriceSentimentChartProps {
   priceSeries: PricePoint[];
   sentimentSeries: SentimentPoint[];
+  syncId?: string;
+  onDateHover?: (date: string | null) => void;
+  onZoomChange?: (range: { start: string; end: string } | null) => void;
 }
 
-export default function PriceSentimentChart({ priceSeries, sentimentSeries }: PriceSentimentChartProps) {
+export default function PriceSentimentChart({ 
+  priceSeries, 
+  sentimentSeries, 
+  syncId,
+  onDateHover,
+  onZoomChange
+}: PriceSentimentChartProps) {
   // Combine price and sentiment data by date
   // Handle both string dates and date objects
   const normalizeDate = (d: string | Date): string => {
@@ -57,8 +67,11 @@ export default function PriceSentimentChart({ priceSeries, sentimentSeries }: Pr
 
   if (chartData.length === 0) {
     return (
-      <div className="bg-white rounded-lg shadow-md p-6">
-        <h3 className="text-lg font-semibold mb-4">Price & Sentiment Over Time</h3>
+      <div className="bg-white rounded-xl shadow-sm border p-6 h-full">
+        <div className="mb-4">
+            <h3 className="text-lg font-semibold text-gray-900">Price & Sentiment Over Time</h3>
+            <p className="text-sm text-gray-500">Did sentiment move with the stock price or diverge?</p>
+        </div>
         <div className="text-center text-gray-500 py-8">No data available</div>
       </div>
     );
@@ -74,12 +87,64 @@ export default function PriceSentimentChart({ priceSeries, sentimentSeries }: Pr
     ...d,
     sentimentScaled: d.sentiment * (priceRange * 0.3) + minPrice // Scale sentiment to 30% of price range
   }));
+  
+  // Correlation calculation for annotation
+  // Simple Pearson correlation on days where we have both
+  let correlation = 0;
+  let validPairs = 0;
+  let sumX = 0, sumY = 0, sumXY = 0, sumX2 = 0, sumY2 = 0;
+
+  chartData.forEach(d => {
+      if (d.price !== null) {
+          const x = d.price;
+          const y = d.sentiment;
+          sumX += x;
+          sumY += y;
+          sumXY += x * y;
+          sumX2 += x * x;
+          sumY2 += y * y;
+          validPairs++;
+      }
+  });
+
+  if (validPairs > 0) {
+      const numerator = validPairs * sumXY - sumX * sumY;
+      const denominator = Math.sqrt((validPairs * sumX2 - sumX * sumX) * (validPairs * sumY2 - sumY * sumY));
+      if (denominator !== 0) correlation = numerator / denominator;
+  }
+
+  const absCorr = Math.abs(correlation);
+  let annotation = "Price and sentiment showed a strong relationship during this window.";
+  if (absCorr < 0.2) {
+      annotation = "Price and sentiment moved mostly independently.";
+  } else if (absCorr < 0.5) {
+      annotation = "Price and sentiment were loosely aligned.";
+  }
 
   return (
-    <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-      <h3 className="text-lg font-semibold mb-4">Price & Sentiment Over Time</h3>
+    <div className="bg-white rounded-xl shadow-sm border p-6 h-full transition-transform hover:-translate-y-0.5 hover:shadow-md">
+      <div className="mb-4">
+          <h3 className="text-lg font-semibold text-gray-900">Price & Sentiment Over Time</h3>
+          <p className="text-sm text-gray-500">Did sentiment move with the stock price or diverge?</p>
+      </div>
       <ResponsiveContainer width="100%" height={400}>
-        <ComposedChart data={normalizedData}>
+        <ComposedChart 
+            data={normalizedData}
+            syncId={syncId}
+            onMouseMove={(state) => {
+                if (state.activeLabel && onDateHover) {
+                    // activeLabel is the date string because XAxis dataKey is dateFormatted? 
+                    // Wait, XAxis dataKey is "dateFormatted". 
+                    // But we want the original date string for sync.
+                    // Actually, we should probably use "date" as key for sync if possible, or just use the index.
+                    // Let's find the payload.
+                     if (state.activePayload && state.activePayload.length > 0) {
+                        onDateHover(state.activePayload[0].payload.date);
+                    }
+                }
+            }}
+            onMouseLeave={() => onDateHover && onDateHover(null)}
+        >
           <CartesianGrid strokeDasharray="3 3" />
           <XAxis
             dataKey="dateFormatted"
@@ -133,12 +198,28 @@ export default function PriceSentimentChart({ priceSeries, sentimentSeries }: Pr
             dot={false}
             name="Sentiment (scaled)"
           />
+          <Brush 
+            dataKey="date" 
+            height={30} 
+            stroke="#8884d8"
+            onChange={(range: any) => {
+                // Recharts Brush onChange returns { startIndex, endIndex } or similar depending on version
+                // Or it might return the actual data if dataKey is set.
+                // Check Recharts docs: onChange({ startIndex, endIndex })
+                if (onZoomChange && range.startIndex !== undefined && range.endIndex !== undefined) {
+                    const start = normalizedData[range.startIndex]?.date;
+                    const end = normalizedData[range.endIndex]?.date;
+                    if (start && end) {
+                        onZoomChange({ start, end });
+                    }
+                }
+            }}
+          />
         </ComposedChart>
       </ResponsiveContainer>
-      <div className="mt-4 text-sm text-gray-600">
-        <p>Note: Sentiment is scaled for visualization. Hover over data points to see actual values.</p>
+      <div className="mt-4 text-sm text-gray-600 border-t pt-3">
+        <p>{annotation}</p>
       </div>
     </div>
   );
 }
-

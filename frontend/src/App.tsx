@@ -1,25 +1,33 @@
-import { useState } from 'react';
-import TickerSelector from './components/TickerSelector';
-import DateRangePicker from './components/DateRangePicker';
+import { useState, useMemo, useRef } from 'react';
+import ControlsSection from './components/ControlsSection';
 import SummaryBar from './components/SummaryBar';
 import PriceSentimentChart from './components/PriceSentimentChart';
 import CorrelationChart from './components/CorrelationChart';
 import ReturnsChart from './components/ReturnsChart';
 import SentimentDistributionChart from './components/SentimentDistributionChart';
-import NewsFeed from './components/NewsFeed';
-import ModelDetails from './components/ModelDetails';
+import NewsDriversSection from './components/NewsDriversSection';
+import ModelReliabilitySection from './components/ModelDetails'; // Refactored component
 import { getSummary } from './api/client';
 import type { SummaryResponse } from './types';
+import { format } from 'date-fns';
 
 function App() {
-  // Fixed date range matching available database data
-  const FIXED_START_DATE = '2025-10-21';
-  const FIXED_END_DATE = '2025-11-20';
-
+  // Default date range
   const [ticker, setTicker] = useState('');
+  const [startDate, setStartDate] = useState('2024-06-01'); 
+  const [endDate, setEndDate] = useState(format(new Date(), 'yyyy-MM-dd')); // Today
+  
   const [summary, setSummary] = useState<SummaryResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Interactive State
+  const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  const [selectedSentimentBucket, setSelectedSentimentBucket] = useState<string | null>(null);
+  const [zoomRange, setZoomRange] = useState<{ start: string; end: string } | null>(null);
+  const [hoveredDate, setHoveredDate] = useState<string | null>(null);
+
+  const newsSectionRef = useRef<HTMLDivElement>(null);
 
   const handleAnalyze = async () => {
     if (!ticker) {
@@ -29,9 +37,14 @@ function App() {
 
     setLoading(true);
     setError(null);
+    // Reset interactive state on new analysis
+    setSelectedDate(null);
+    setSelectedSentimentBucket(null);
+    setZoomRange(null);
+    setHoveredDate(null);
 
     try {
-      const data = await getSummary(ticker, FIXED_START_DATE, FIXED_END_DATE);
+      const data = await getSummary(ticker, startDate, endDate);
       setSummary(data);
     } catch (err) {
       console.error('Error fetching analysis:', err);
@@ -43,88 +56,157 @@ function App() {
     }
   };
 
+  // Filter data based on zoomRange
+  const filteredSummary = useMemo(() => {
+    if (!summary) return null;
+    if (!zoomRange) return summary;
+
+    const start = new Date(zoomRange.start).getTime();
+    const end = new Date(zoomRange.end).getTime();
+
+    // Helper to check if date is in range
+    const isInRange = (dateStr: string) => {
+      const d = new Date(dateStr).getTime();
+      return d >= start && d <= end;
+    };
+
+    return {
+      ...summary,
+      price_series: summary.price_series.filter(p => isInRange(p.date)),
+      sentiment_series: summary.sentiment_series.filter(s => isInRange(s.date)),
+      articles: summary.articles.filter(a => isInRange(a.date)),
+    };
+  }, [summary, zoomRange]);
+
+  // Sync ID for Recharts
+  const SYNC_ID = "analysis-sync";
+
+  const handleDateClick = (date: string) => {
+      setSelectedDate(date);
+      // Scroll to news section if needed
+      if (newsSectionRef.current) {
+          newsSectionRef.current.scrollIntoView({ behavior: 'smooth' });
+      }
+  };
+
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-white shadow-sm border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <h1 className="text-3xl font-bold text-gray-900">
-            News & Sentiment Driven Stock Explorer
-          </h1>
-          <p className="mt-2 text-gray-600">
-            Explore how news sentiment relates to stock price movements
-          </p>
+    <div className="min-h-screen bg-slate-50 text-slate-900 font-sans">
+      {/* 1.1 Hero Header */}
+      <header className="bg-white border-b border-slate-200 sticky top-0 z-10">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+          <div className="flex flex-col md:flex-row md:items-center justify-between">
+            <div>
+                <h1 className="text-2xl font-bold text-slate-900 tracking-tight">
+                    News & Sentiment Driven Stock Explorer
+                </h1>
+                <p className="text-sm text-slate-500 mt-1">
+                    Explore how ticker-specific news sentiment lined up with short-term stock returns.
+                </p>
+            </div>
+          </div>
         </div>
       </header>
 
-      {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Controls Panel */}
-        <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-          <h2 className="text-xl font-semibold mb-4">Analysis Controls</h2>
-          <div className="space-y-4">
-            <TickerSelector value={ticker} onChange={setTicker} />
-            <DateRangePicker
-              startDate={FIXED_START_DATE}
-              endDate={FIXED_END_DATE}
-            />
-            <button
-              onClick={handleAnalyze}
-              disabled={loading || !ticker}
-              className="w-full md:w-auto px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed font-medium transition-colors"
-            >
-              {loading ? 'Analyzing...' : 'Analyze'}
-            </button>
-          </div>
-          {error && (
-            <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-md text-red-700">
-              {error}
-            </div>
-          )}
-        </div>
+        
+        {/* 1.2 Controls Section */}
+        <ControlsSection 
+            ticker={ticker}
+            startDate={startDate}
+            endDate={endDate}
+            loading={loading}
+            onTickerChange={setTicker}
+            onStartDateChange={setStartDate}
+            onEndDateChange={setEndDate}
+            onAnalyze={handleAnalyze}
+        />
 
-        {/* Results */}
-        {summary && (
-          <>
-            <SummaryBar data={summary} />
-            
-            {/* Main Charts Row */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-              <PriceSentimentChart
-                priceSeries={summary.price_series}
-                sentimentSeries={summary.sentiment_series}
-              />
-              <CorrelationChart
-                priceSeries={summary.price_series}
-                sentimentSeries={summary.sentiment_series}
-              />
+        {error && (
+            <div className="mb-8 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700 flex items-center">
+                <svg className="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" /></svg>
+                {error}
             </div>
-
-            {/* Secondary Charts Row */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-              <ReturnsChart priceSeries={summary.price_series} />
-              <SentimentDistributionChart articles={summary.articles} />
-            </div>
-
-            {/* News Feed */}
-            <div className="mb-6">
-              <NewsFeed articles={summary.articles} />
-            </div>
-          </>
         )}
 
-        {/* Model Details */}
-        <div className="mt-6">
-          <ModelDetails />
-        </div>
-      </main>
+        {filteredSummary && (
+            <>
+                {/* 1.3 Insight Bar */}
+                <SummaryBar data={filteredSummary} />
 
+                {/* 2. Evidence Section */}
+                <section className="mb-12">
+                    <div className="mb-6 border-b border-gray-200 pb-2">
+                        <h2 className="text-2xl font-bold text-gray-900">3. Evidence</h2>
+                        <p className="text-gray-500">See how price, sentiment, and returns behaved over this period.</p>
+                    </div>
+
+                    <div className="grid gap-6 lg:grid-cols-2">
+                        {/* Price & Sentiment */}
+                        <div className="lg:h-[450px]">
+                            <PriceSentimentChart
+                                priceSeries={filteredSummary.price_series}
+                                sentimentSeries={filteredSummary.sentiment_series}
+                                syncId={SYNC_ID}
+                                onDateHover={setHoveredDate}
+                                onZoomChange={setZoomRange}
+                            />
+                        </div>
+                        
+                        {/* Correlation */}
+                        <div className="lg:h-[450px]">
+                            <CorrelationChart
+                                priceSeries={filteredSummary.price_series}
+                                sentimentSeries={filteredSummary.sentiment_series}
+                                onDateClick={handleDateClick}
+                            />
+                        </div>
+                    </div>
+
+                    <div className="grid gap-6 lg:grid-cols-2 mt-6">
+                        {/* Returns */}
+                        <div className="lg:h-[400px]">
+                            <ReturnsChart 
+                                priceSeries={filteredSummary.price_series} 
+                                syncId={SYNC_ID}
+                                onDateHover={setHoveredDate}
+                                onDateClick={handleDateClick}
+                            />
+                        </div>
+
+                        {/* Distribution */}
+                        <div className="lg:h-[400px]">
+                            <SentimentDistributionChart 
+                                articles={filteredSummary.articles} 
+                                onBucketClick={(bucket: any) => setSelectedSentimentBucket(bucket)}
+                            />
+                        </div>
+                    </div>
+                </section>
+
+                {/* 3. News Drivers Section */}
+                <div ref={newsSectionRef} className="mb-12 scroll-mt-24">
+                    <NewsDriversSection 
+                        articles={filteredSummary.articles}
+                        priceSeries={filteredSummary.price_series}
+                        selectedDate={selectedDate || hoveredDate}
+                        selectedSentimentBucket={selectedSentimentBucket}
+                    />
+                </div>
+            </>
+        )}
+
+        {/* 4. Model Reliability */}
+        <section className="mb-12">
+            <ModelReliabilitySection />
+        </section>
+
+      </main>
+      
       {/* Footer */}
-      <footer className="bg-white border-t border-gray-200 mt-12">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <p className="text-center text-sm text-gray-500">
-            Built with FastAPI, React, and Machine Learning
-          </p>
+      <footer className="bg-white border-t border-slate-200 py-8 mt-12">
+        <div className="max-w-7xl mx-auto px-4 text-center text-slate-500 text-sm">
+            <p>Built with FastAPI, React, and Machine Learning.</p>
+            <p className="mt-1">Not financial advice. For educational purposes only.</p>
         </div>
       </footer>
     </div>
@@ -132,4 +214,3 @@ function App() {
 }
 
 export default App;
-

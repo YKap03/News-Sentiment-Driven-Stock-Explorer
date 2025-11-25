@@ -10,13 +10,17 @@ import {
   Cell
 } from 'recharts';
 import type { PricePoint, SentimentPoint } from '../types';
+import { useState } from 'react';
 
 interface CorrelationChartProps {
   priceSeries: PricePoint[];
   sentimentSeries: SentimentPoint[];
+  onDateClick?: (date: string) => void;
 }
 
-export default function CorrelationChart({ priceSeries, sentimentSeries }: CorrelationChartProps) {
+export default function CorrelationChart({ priceSeries, sentimentSeries, onDateClick }: CorrelationChartProps) {
+  const [selectedPoint, setSelectedPoint] = useState<{date: string; price: number; sentiment: number} | null>(null);
+
   // Normalize dates
   const normalizeDate = (d: string | Date): string => {
     if (typeof d === 'string') return d;
@@ -31,26 +35,22 @@ export default function CorrelationChart({ priceSeries, sentimentSeries }: Corre
   );
 
   // For correlation, we need dates where BOTH price and sentiment exist
-  // If sentiment is sparse, we can use the closest sentiment value for each price date
   const scatterData: Array<{date: string; price: number; sentiment: number; color: string}> = [];
   
-  // Get all price dates and find closest sentiment for each
   priceMapNormalized.forEach((price, dateStr) => {
-    // Try exact match first
     let sentiment = sentimentMapNormalized.get(dateStr);
     
-    // If no exact match, find closest sentiment date
+    // Fallback: find closest sentiment date if missing (within 7 days)
     if (sentiment === undefined && sentimentMapNormalized.size > 0) {
       const sentimentDates = Array.from(sentimentMapNormalized.keys()).sort();
       const priceDate = new Date(dateStr);
       
-      // Find closest sentiment date (within 7 days)
       let closestDate: string | null = null;
       let minDiff = Infinity;
       
       for (const sentDate of sentimentDates) {
         const diff = Math.abs(new Date(sentDate).getTime() - priceDate.getTime());
-        if (diff < minDiff && diff < 7 * 24 * 60 * 60 * 1000) { // Within 7 days
+        if (diff < minDiff && diff < 7 * 24 * 60 * 60 * 1000) { 
           minDiff = diff;
           closestDate = sentDate;
         }
@@ -66,7 +66,6 @@ export default function CorrelationChart({ priceSeries, sentimentSeries }: Corre
         date: dateStr,
         price,
         sentiment,
-        // Color based on sentiment
         color: sentiment > 0.1 ? '#10b981' : sentiment < -0.1 ? '#ef4444' : '#6b7280'
       });
     }
@@ -74,12 +73,9 @@ export default function CorrelationChart({ priceSeries, sentimentSeries }: Corre
 
   if (scatterData.length === 0) {
     return (
-      <div className="bg-white rounded-lg shadow-md p-6">
-        <h3 className="text-lg font-semibold mb-4">Price vs Sentiment Correlation</h3>
-        <div className="text-center text-gray-500 py-8">
-          <p>No sentiment data available for correlation analysis.</p>
-          <p className="text-sm mt-2">Sentiment data points: {sentimentSeries.length}</p>
-        </div>
+      <div className="bg-white rounded-xl shadow-sm border p-6 h-full">
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">Price vs Sentiment Correlation</h3>
+        <div className="text-center text-gray-500 py-8">No data available</div>
       </div>
     );
   }
@@ -101,67 +97,84 @@ export default function CorrelationChart({ priceSeries, sentimentSeries }: Corre
 
   const correlation = numerator / Math.sqrt(priceVariance * sentimentVariance) || 0;
 
+  let correlationText = "loosely tracked price moves";
+  if (Math.abs(correlation) > 0.5) correlationText = "strongly tracked price moves";
+  else if (Math.abs(correlation) < 0.1) correlationText = "had no relation to price moves";
+
+  const correlationLabel = correlation > 0 ? "positive" : "negative";
+  const annotation = `Correlation: ${correlation.toFixed(2)} (${correlationLabel}) – sentiment ${correlationText}.`;
+
   return (
-    <div className="bg-white rounded-lg shadow-md p-6">
-      <h3 className="text-lg font-semibold mb-2">Price vs Sentiment Correlation</h3>
-      <div className="mb-4">
-        <p className="text-sm text-gray-600">
-          Correlation Coefficient: <span className="font-semibold">{correlation.toFixed(3)}</span>
-        </p>
-        <p className="text-xs text-gray-500 mt-1">
-          {correlation > 0.3
-            ? 'Strong positive correlation'
-            : correlation > 0.1
-            ? 'Moderate positive correlation'
-            : correlation > -0.1
-            ? 'Weak correlation'
-            : correlation > -0.3
-            ? 'Moderate negative correlation'
-            : 'Strong negative correlation'}
-        </p>
-      </div>
+    <div className="bg-white rounded-xl shadow-sm border p-6 h-full transition-transform hover:-translate-y-0.5 hover:shadow-md">
+        <div className="flex justify-between items-start mb-4">
+            <div>
+                <h3 className="text-lg font-semibold text-gray-900">Price vs Sentiment Correlation</h3>
+                <p className="text-sm text-gray-500">Each dot is a day. Higher scores mean more positive news.</p>
+            </div>
+            <div className="text-right">
+                <div className="text-2xl font-bold text-blue-600">{correlation.toFixed(2)}</div>
+                <div className="text-xs text-gray-500">Correlation Coeff</div>
+            </div>
+        </div>
+      
       <ResponsiveContainer width="100%" height={400}>
-        <ScatterChart data={scatterData}>
+        <ScatterChart 
+            data={scatterData} 
+            onClick={(state) => {
+                if (state && state.activePayload && state.activePayload.length > 0) {
+                    const point = state.activePayload[0].payload;
+                    setSelectedPoint(point);
+                    if (onDateClick) onDateClick(point.date);
+                }
+            }}
+        >
           <CartesianGrid strokeDasharray="3 3" />
           <XAxis
             type="number"
             dataKey="sentiment"
             name="Sentiment"
             label={{ value: 'Sentiment Score', position: 'insideBottom', offset: -5 }}
-            domain={['dataMin - 0.1', 'dataMax + 0.1']}
+            domain={[-1, 1]} 
           />
           <YAxis
             type="number"
             dataKey="price"
             name="Price"
             label={{ value: 'Price ($)', angle: -90, position: 'insideLeft' }}
-            domain={['dataMin - 10', 'dataMax + 10']}
+            domain={['auto', 'auto']}
           />
           <Tooltip
             cursor={{ strokeDasharray: '3 3' }}
-            formatter={(value: number, name: string) => {
-              if (name === 'price') {
-                return [`$${value.toFixed(2)}`, 'Price'];
-              }
-              if (name === 'sentiment') {
-                return [value.toFixed(3), 'Sentiment'];
-              }
-              return [value, name];
+            content={({ active, payload }) => {
+                if (active && payload && payload.length) {
+                    const data = payload[0].payload;
+                    return (
+                        <div className="bg-white p-2 border shadow-sm rounded text-sm">
+                            <p className="font-semibold">{data.date}</p>
+                            <p>Sentiment: {data.sentiment.toFixed(3)}</p>
+                            <p>Price: ${data.price.toFixed(2)}</p>
+                        </div>
+                    );
+                }
+                return null;
             }}
-            labelFormatter={(label) => `Date: ${label}`}
           />
-          <Legend />
-          <Scatter name="Price vs Sentiment" data={scatterData} fill="#3b82f6">
+          <Scatter name="Price vs Sentiment" data={scatterData} fill="#3b82f6" cursor="pointer">
             {scatterData.map((entry, index) => (
               <Cell key={`cell-${index}`} fill={entry.color} />
             ))}
           </Scatter>
         </ScatterChart>
       </ResponsiveContainer>
-      <div className="mt-4 text-sm text-gray-600">
-        <p>Each point represents a day. Color: Green (positive sentiment), Red (negative), Gray (neutral)</p>
+      
+      <div className="mt-4 text-sm text-gray-600 border-t pt-3">
+        <p>{annotation}</p>
+        {selectedPoint && (
+            <div className="mt-2 p-2 bg-blue-50 rounded text-blue-800 text-xs">
+                Selected: <strong>{selectedPoint.date}</strong> | Price: ${selectedPoint.price.toFixed(2)} | Sentiment: {selectedPoint.sentiment.toFixed(2)}
+            </div>
+        )}
       </div>
     </div>
   );
 }
-

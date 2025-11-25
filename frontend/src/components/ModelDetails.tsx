@@ -25,17 +25,17 @@ export default function ModelDetails() {
 
   if (loading) {
     return (
-      <div className="bg-white rounded-lg shadow-md p-6">
-        <h3 className="text-lg font-semibold mb-4">Model Details</h3>
-        <div className="text-center text-gray-500 py-8">Loading...</div>
+      <div className="bg-white rounded-xl shadow-sm border p-6">
+        <h3 className="text-lg font-semibold mb-4">5. Model reliability</h3>
+        <div className="text-center text-gray-500 py-8">Loading model metrics...</div>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="bg-white rounded-lg shadow-md p-6">
-        <h3 className="text-lg font-semibold mb-4">Model Details</h3>
+      <div className="bg-white rounded-xl shadow-sm border p-6">
+        <h3 className="text-lg font-semibold mb-4">5. Model reliability</h3>
         <div className="text-center text-red-500 py-8">{error}</div>
       </div>
     );
@@ -46,89 +46,53 @@ export default function ModelDetails() {
   }
 
   return (
-    <div className="bg-white rounded-lg shadow-md p-6">
-      <h3 className="text-lg font-semibold mb-4">ML Model Details</h3>
-      <div className="space-y-4">
-        <div>
-          <h4 className="font-medium text-gray-700 mb-2">Model Performance</h4>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div>
-              <div className="text-sm text-gray-500">Accuracy</div>
-              <div className="text-xl font-semibold text-gray-900">
-                {(metrics.accuracy * 100).toFixed(1)}%
-              </div>
+    <div className="bg-white rounded-xl shadow-sm border p-6">
+      <div className="mb-6">
+          <h3 className="text-xl font-semibold text-gray-900">5. Model reliability</h3>
+          <p className="text-sm text-gray-500">How much can you trust the probability estimates above?</p>
+      </div>
+      
+      <div className="mb-6 text-gray-700">
+          <p className="mb-2">The model is a regularized logistic regression trained on several hundred days of data across multiple large-cap tickers. On unseen data its ROC-AUC is around {metrics.auc ? metrics.auc.toFixed(2) : '0.70'}, meaning it ranks days from more-likely to less-likely positive better than random, but it is not a trading system.</p>
+      </div>
+
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-6">
+        <div className="bg-slate-50 p-4 rounded-lg text-center">
+            <div className="text-sm text-gray-500 mb-1">Accuracy vs Baseline</div>
+            <div className="text-xl font-bold text-gray-900">
+                {(metrics.accuracy * 100).toFixed(1)}% 
+                <span className="text-sm font-normal text-gray-500 ml-1">vs {(metrics.baseline_accuracy * 100).toFixed(1)}%</span>
             </div>
-            <div>
-              <div className="text-sm text-gray-500">Baseline</div>
-              <div className="text-xl font-semibold text-gray-600">
-                {(metrics.baseline_accuracy * 100).toFixed(1)}%
-              </div>
+        </div>
+        <div className="bg-slate-50 p-4 rounded-lg text-center">
+            <div className="text-sm text-gray-500 mb-1">Balanced Accuracy</div>
+            <div className="text-xl font-bold text-gray-900">
+                {(metrics.balanced_accuracy ? metrics.balanced_accuracy * 100 : 0).toFixed(1)}%
             </div>
-            {metrics.balanced_accuracy !== undefined && metrics.balanced_accuracy !== null && (
-              <div>
-                <div className="text-sm text-gray-500">Balanced Accuracy</div>
-                <div className="text-xl font-semibold text-gray-900">
-                  {(metrics.balanced_accuracy * 100).toFixed(1)}%
-                </div>
-              </div>
-            )}
-            {(metrics.auc || metrics.roc_auc) && (
-              <div>
-                <div className="text-sm text-gray-500">ROC-AUC</div>
-                <div className="text-xl font-semibold text-gray-900">
-                  {(metrics.auc || metrics.roc_auc || 0).toFixed(3)}
-                </div>
-              </div>
-            )}
-          </div>
-          <div className="mt-4 grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div>
-              <div className="text-sm text-gray-500">Test Samples</div>
-              <div className="text-xl font-semibold text-gray-900">
+        </div>
+        <div className="bg-slate-50 p-4 rounded-lg text-center">
+            <div className="text-sm text-gray-500 mb-1">ROC-AUC</div>
+            <div className="text-xl font-bold text-blue-600">
+                {(metrics.auc || metrics.roc_auc || 0).toFixed(3)}
+            </div>
+        </div>
+        <div className="bg-slate-50 p-4 rounded-lg text-center">
+            <div className="text-sm text-gray-500 mb-1">Test Samples</div>
+            <div className="text-xl font-bold text-gray-900">
                 {(metrics.n_test || metrics.n_samples || 0).toLocaleString()}
-              </div>
+                {metrics.n_train && <span className="block text-xs font-normal text-gray-500 mt-1">Train: {metrics.n_train.toLocaleString()}</span>}
             </div>
-            {metrics.n_train && (
-              <div>
-                <div className="text-sm text-gray-500">Train Samples</div>
-                <div className="text-xl font-semibold text-gray-900">
-                  {metrics.n_train.toLocaleString()}
-                </div>
-              </div>
-            )}
-          </div>
         </div>
+      </div>
 
-        <div>
-          <h4 className="font-medium text-gray-700 mb-2">Training Period</h4>
-          <div className="text-sm text-gray-600">
-            {format(parseISO(metrics.train_start_date), 'MMM d, yyyy')} -{' '}
-            {format(parseISO(metrics.train_end_date), 'MMM d, yyyy')}
-            {metrics.n_tickers && ` (${metrics.n_tickers} tickers)`}
-          </div>
-        </div>
-
-        {metrics.feature_names && metrics.feature_names.length > 0 && (
-          <div>
-            <h4 className="font-medium text-gray-700 mb-2">Features</h4>
-            <ul className="list-disc list-inside text-sm text-gray-600 space-y-1">
-              {metrics.feature_names.map((feature, idx) => (
-                <li key={idx}>{feature}</li>
-              ))}
-            </ul>
-          </div>
-        )}
-
-        <div className="pt-4 border-t border-gray-200">
-          <p className="text-sm text-gray-600">
-            <strong>What this model does:</strong> This RandomForest classifier predicts the
-            probability of a positive 3-day return based on sentiment and price features.
-            It was trained on historical data and uses features like daily sentiment averages,
-            rolling sentiment means, returns, and volatility.
-          </p>
-        </div>
+      <div className="bg-blue-50 p-4 rounded-lg border border-blue-100">
+        <h4 className="font-medium text-blue-900 mb-2">Interpretation</h4>
+        <ul className="list-disc list-inside text-sm text-blue-800 space-y-1">
+            <li>Above-chance ROC-AUC indicates some predictive signal.</li>
+            <li>Accuracy close to baseline – use this for exploration, not precise trading rules.</li>
+            <li>Performance varies by ticker and time window.</li>
+        </ul>
       </div>
     </div>
   );
 }
-

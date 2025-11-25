@@ -1,11 +1,15 @@
 interface DateRangePickerProps {
   startDate: string;
   endDate: string;
+  onStartDateChange: (date: string) => void;
+  onEndDateChange: (date: string) => void;
 }
 
 export default function DateRangePicker({
   startDate,
-  endDate
+  endDate,
+  onStartDateChange,
+  onEndDateChange
 }: DateRangePickerProps) {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -17,9 +21,8 @@ export default function DateRangePicker({
           id="start-date"
           type="date"
           value={startDate}
-          readOnly
-          disabled
-          className="w-full px-3 py-2 border border-gray-200 rounded-md shadow-sm bg-gray-100 text-gray-600 cursor-not-allowed"
+          onChange={(e) => onStartDateChange(e.target.value)}
+          className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
         />
       </div>
       <div>
@@ -30,12 +33,10 @@ export default function DateRangePicker({
           id="end-date"
           type="date"
           value={endDate}
-          readOnly
-          disabled
-          className="w-full px-3 py-2 border border-gray-200 rounded-md shadow-sm bg-gray-100 text-gray-600 cursor-not-allowed"
+          onChange={(e) => onEndDateChange(e.target.value)}
+          className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
         />
       </div>
     </div>
   );
 }
-
