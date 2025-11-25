@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import { getModelMetrics } from '../api/client';
 import type { ModelMetrics } from '../types';
-import { format, parseISO } from 'date-fns';
 
 export default function ModelDetails() {
   const [metrics, setMetrics] = useState<ModelMetrics | null>(null);

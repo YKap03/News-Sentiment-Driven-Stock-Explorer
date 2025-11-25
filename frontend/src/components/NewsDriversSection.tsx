@@ -1,6 +1,6 @@
 import type { Article, PricePoint } from '../types';
 import NewsFeed from './NewsFeed';
-import { format, parseISO, addDays } from 'date-fns';
+import { format, parseISO } from 'date-fns';
 
 interface NewsDriversSectionProps {
   articles: Article[];
@@ -18,7 +18,6 @@ export default function NewsDriversSection({
   
   // Helper to calculate returns
   const getReturnForDate = (dateStr: string): string => {
-    const date = parseISO(dateStr);
     // Find price for this date
     const priceIdx = priceSeries.findIndex(p => p.date.startsWith(dateStr));
     if (priceIdx === -1 || priceIdx + 3 >= priceSeries.length) return "Data not available";
@@ -136,4 +135,3 @@ export default function NewsDriversSection({
     </section>
   );
 }
-
